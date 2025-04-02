@@ -4,36 +4,41 @@ const mongoose = require('mongoose');
 // GET all orders
 const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find({});
-    res.status(200).json(orders);
+    const orders = await Order.find()
+      .populate('supplier_id', 'company_name') // just get the company name
+      .sort({ order_date: -1 });
+
+    const formattedOrders = orders.map(order => ({
+      _id: order._id,
+      order_date: order.order_date,
+      status: order.status,
+      supplier_name: order.supplier_id?.company_name || 'Unknown'
+    }));
+
+    res.json(formattedOrders);
   } catch (err) {
+    console.error('Failed to fetch orders:', err);
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 };
 
 // PATCH update order status
 const updateOrderStatus = async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ error: 'Invalid order ID' });
-  }
-
   try {
-    const updated = await Order.findByIdAndUpdate(
-      id,
-      { status },
+    const updatedOrder = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
       { new: true }
     );
 
-    if (!updated) {
+    if (!updatedOrder) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.status(200).json(updated);
+    res.json(updatedOrder);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update status' });
+    console.error('Failed to update order:', err);
+    res.status(500).json({ error: 'Failed to update order status' });
   }
 };
 

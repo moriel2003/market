@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import SupplierSignup from './pages/SupplierSignup';
 import Login from './pages/Login';
 import Orders from './pages/Orders';
+import StoreOwnerScreen from './pages/StoreOwnerScreen';
 
 
 function App() {
@@ -14,6 +15,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/orders" element={supplierId ? <Orders /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="/store-owner" element={<StoreOwnerScreen />} />
+
       </Routes>
     </Router>
   );
