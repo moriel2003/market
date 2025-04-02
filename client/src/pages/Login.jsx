@@ -73,7 +73,7 @@ function Login() {
 
           <Typography variant="body2" align="center" sx={{ mt: 2 }}>
             Don&apos;t have an account?{' '}
-            <Link href="/signup" underline="hover">
+            <Link href="/SupplierSignup" underline="hover">
               Sign up
             </Link>
           </Typography>

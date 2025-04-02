@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Signup from './pages/Signup';
+import SupplierSignup from './pages/SupplierSignup';
 import Login from './pages/Login';
 import Orders from './pages/Orders';
 
@@ -10,7 +10,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/SupplierSignup" element={<SupplierSignup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/orders" element={supplierId ? <Orders /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/login" />} />

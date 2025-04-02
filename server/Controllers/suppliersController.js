@@ -1,42 +1,63 @@
 const Supplier = require('../models/suppliersModel');
+const Product = require('../models/productsModel');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-// 🔹 Register a new supplier
 const postNewSupplier = async (req, res) => {
   const {
     company_name,
     phone,
     representative_name,
     username,
-    password
+    password,
+    products = [] // list of { product_name, price_per_unit, minimum_quantity }
   } = req.body;
 
   try {
-    // Check if username already exists
-    const existing = await Supplier.findOne({ username });
-    if (existing) {
-      return res.status(400).json({ error: 'Username already taken' });
+    const cleanProducts = [];
+
+    for (const item of products) {
+      if (
+        !item.product_name ||
+        !item.price_per_unit ||
+        !item.minimum_quantity ||
+        isNaN(item.price_per_unit) ||
+        isNaN(item.minimum_quantity) ||
+        parseFloat(item.price_per_unit) <= 0 ||
+        parseInt(item.minimum_quantity) <= 0
+      ) {
+        return res.status(400).json({ error: `Invalid product data for "${item.product_name}"` });
+      }
+
+      const cleanName = item.product_name.trim().toLowerCase();
+
+      // Check if product already exists in central product list
+      const existing = await Product.findOne({ name: cleanName });
+
+      if (!existing) {
+        await Product.create({ name: cleanName }); // only add if truly new
+      }
+
+      cleanProducts.push({
+        product_name: cleanName,
+        price_per_unit: parseFloat(item.price_per_unit),
+        minimum_quantity: parseInt(item.minimum_quantity)
+      });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create supplier
     const newSupplier = await Supplier.create({
       company_name,
       phone,
       representative_name,
       username,
-      password: hashedPassword
+      password,
+      products: cleanProducts
     });
 
-    res.status(200).json({
-      _id: newSupplier._id,
-      username: newSupplier.username
-    });
+    res.status(201).json(newSupplier);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Signup failed', details: err.message });
   }
 };
 
