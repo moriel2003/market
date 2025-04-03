@@ -4,6 +4,7 @@ const OrdersRoutes = require('./routes/OrdersRoutes');
 const ProductsRoutes = require('./routes/ProductsRoutes');
 const StoreOwnerRoutes = require('./routes/StoreOwnerRoutes');
 const SuppliersRoutes = require('./routes/SuppliersRoutes');
+const supplyRoutes = require('./routes/supplyRoutes');
 
 
 
@@ -20,6 +21,7 @@ app.use('/Orders', OrdersRoutes);
 app.use('/Products', ProductsRoutes);
 app.use('/StoreOwner', StoreOwnerRoutes);
 app.use('/Suppliers', SuppliersRoutes);
+app.use('/supply', supplyRoutes);
 
 
 

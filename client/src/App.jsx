@@ -3,6 +3,7 @@ import SupplierSignup from './pages/SupplierSignup';
 import Login from './pages/Login';
 import Orders from './pages/Orders';
 import StoreOwnerScreen from './pages/StoreOwnerScreen';
+import CreateOrderScreen from './pages/CreateOrderScreen'; // ✅
 
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/orders" element={supplierId ? <Orders /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/login" />} />
         <Route path="/store-owner" element={<StoreOwnerScreen />} />
+        <Route path="/store/create-order" element={<CreateOrderScreen />} /> {/* ✅ new route */}
 
       </Routes>
     </Router>

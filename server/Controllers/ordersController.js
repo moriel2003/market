@@ -1,4 +1,5 @@
 const Order = require('../models/ordersModel');
+const Supply = require('../models/supplyModel');
 const mongoose = require('mongoose');
 
 const getAllOrders = async (req, res) => {
@@ -25,21 +26,35 @@ const getAllOrders = async (req, res) => {
 
 // PATCH update order status
 const updateOrderStatus = async (req, res) => {
-  try {
-    const updatedOrder = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status: req.body.status },
-      { new: true }
-    );
+  const { id } = req.params;
+  const { status } = req.body;
 
-    if (!updatedOrder) {
-      return res.status(404).json({ error: 'Order not found' });
+  try {
+    const order = await Order.findById(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    // If changing from "in-process" to "Completed", update supply
+    if (status === 'Completed' && order.status === 'in-process') {
+      for (const item of order.items) {
+        const supply = await Supply.findOne({ product_name: item.product_name });
+
+        if (supply) {
+          supply.current_quantity += item.quantity;
+          await supply.save();
+        } else {
+          console.warn(`⚠️ No supply entry found for ${item.product_name}`);
+        }
+      }
     }
 
-    res.json(updatedOrder);
-  } catch (err) {
-    console.error('Failed to update order:', err);
-    res.status(500).json({ error: 'Failed to update order status' });
+    // Update the status
+    order.status = status;
+    await order.save();
+
+    res.status(200).json({ message: 'Order status updated successfully.' });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ error: 'Server error while updating order status.' });
   }
 };
 

@@ -12,28 +12,36 @@ import {
   Checkbox,
   FormControl,
   InputLabel,
-  Box,
+  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   IconButton,
   Button,
-  Chip
+  Chip,
+  Tooltip,
+  Box
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
 import axios from '../api/axiosInstance';
+import { useNavigate } from 'react-router-dom';
 
 function StoreOwnerScreen() {
+  
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
   const [supplierFilter, setSupplierFilter] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [suppliersList, setSuppliersList] = useState([]);
-
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [popupOpen, setPopupOpen] = useState(false);
+  
+const navigate = useNavigate();
+
+
 
   useEffect(() => {
     fetchOrders();
@@ -56,23 +64,10 @@ function StoreOwnerScreen() {
 
   const applyFilters = () => {
     let data = [...orders];
-
-    if (statusFilter !== 'All') {
-      data = data.filter(order => order.status === statusFilter);
-    }
-
-    if (supplierFilter !== 'All') {
-      data = data.filter(order => order.supplier_name === supplierFilter);
-    }
-
-    if (sortBy === 'date') {
-      data.sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
-    } else if (sortBy === 'supplier') {
-      data.sort((a, b) =>
-        (a.supplier_name || '').localeCompare(b.supplier_name || '')
-      );
-    }
-
+    if (statusFilter !== 'All') data = data.filter(order => order.status === statusFilter);
+    if (supplierFilter !== 'All') data = data.filter(order => order.supplier_name === supplierFilter);
+    if (sortBy === 'date') data.sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
+    else if (sortBy === 'supplier') data.sort((a, b) => (a.supplier_name || '').localeCompare(b.supplier_name || ''));
     setFilteredOrders(data);
   };
 
@@ -85,11 +80,6 @@ function StoreOwnerScreen() {
     }
   };
 
-  const openPopup = (order) => {
-    setSelectedOrder(order);
-    setPopupOpen(true);
-  };
-
   const getStatusChipColor = (status) => {
     switch (status) {
       case 'Pending Approval': return 'default';
@@ -99,48 +89,62 @@ function StoreOwnerScreen() {
     }
   };
 
-  const calculateTotal = () => {
-    if (!selectedOrder?.items) return '0.00';
-    return selectedOrder.items.reduce((total, item) => {
-      const price = parseFloat(item.price) || 0;
-      return total + (price * item.quantity);
-    }, 0).toFixed(2);
+  const calculateTotal = (items) => {
+    if (!items || items.length === 0) return '0.00';
+    return items.reduce((total, item) => total + (item.price || 0) * (item.quantity || 0), 0).toFixed(2);
   };
 
   return (
     <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>Store Owner Screen</Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4">Store Owner Screen</Typography>
+        <Box display="flex" flexDirection="column" alignItems="center">
+        <IconButton color="primary" onClick={() => navigate('/store/create-order')}>
+  <AddIcon />
+</IconButton>
+  <Typography variant="caption" color="textSecondary">
+    Make New Order
+  </Typography>
+</Box>
 
-      <Box display="flex" gap={2} flexWrap="wrap" mb={2}>
-        <FormControl fullWidth sx={{ minWidth: 220 }}>
-          <InputLabel>Status</InputLabel>
-          <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>
-            <MenuItem value="All">All</MenuItem>
-            <MenuItem value="Pending Approval">Pending Approval</MenuItem>
-            <MenuItem value="In Process">In Process</MenuItem>
-            <MenuItem value="Completed">Completed</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth sx={{ minWidth: 220 }}>
-          <InputLabel>Sort By</InputLabel>
-          <Select value={sortBy} label="Sort By" onChange={(e) => setSortBy(e.target.value)}>
-            <MenuItem value="date">Date</MenuItem>
-            <MenuItem value="supplier">Supplier</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth sx={{ minWidth: 220 }}>
-          <InputLabel>Choose Supplier</InputLabel>
-          <Select value={supplierFilter} label="Choose Supplier" onChange={(e) => setSupplierFilter(e.target.value)}>
-            <MenuItem value="All">All Suppliers</MenuItem>
-            {suppliersList.map((name, idx) => (
-              <MenuItem key={idx} value={name}>{name}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
       </Box>
 
+      {/* Filters */}
+      <Grid container spacing={2} mb={2}>
+        <Grid xs={4}>
+          <FormControl fullWidth>
+            <InputLabel>Status</InputLabel>
+            <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>
+              <MenuItem value="All">All</MenuItem>
+              <MenuItem value="Pending Approval">Pending Approval</MenuItem>
+              <MenuItem value="In Process">In Process</MenuItem>
+              <MenuItem value="Completed">Completed</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid xs={4}>
+          <FormControl fullWidth>
+            <InputLabel>Sort By</InputLabel>
+            <Select value={sortBy} label="Sort By" onChange={(e) => setSortBy(e.target.value)}>
+              <MenuItem value="date">Date</MenuItem>
+              <MenuItem value="supplier">Supplier</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid xs={4}>
+          <FormControl fullWidth>
+            <InputLabel>Choose Supplier</InputLabel>
+            <Select value={supplierFilter} label="Choose Supplier" onChange={(e) => setSupplierFilter(e.target.value)}>
+              <MenuItem value="All">All Suppliers</MenuItem>
+              {suppliersList.map((name, idx) => (
+                <MenuItem key={idx} value={name}>{name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+
+      {/* Orders Table */}
       <Table>
         <TableHead>
           <TableRow>
@@ -148,6 +152,7 @@ function StoreOwnerScreen() {
             <TableCell>Supplier</TableCell>
             <TableCell>Date</TableCell>
             <TableCell>Status</TableCell>
+            <TableCell>Total</TableCell>
             <TableCell>Mark as Completed</TableCell>
           </TableRow>
         </TableHead>
@@ -156,18 +161,31 @@ function StoreOwnerScreen() {
             <TableRow key={order._id}>
               <TableCell
                 sx={{ cursor: 'pointer', color: 'blue' }}
-                onClick={() => openPopup(order)}
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setPopupOpen(true);
+                }}
               >
                 {index + 1}
               </TableCell>
               <TableCell>{order.supplier_name}</TableCell>
               <TableCell>{new Date(order.order_date).toLocaleString()}</TableCell>
               <TableCell>
-                <Chip label={order.status} color={getStatusChipColor(order.status)} size="small" />
+                <Chip
+                  label={order.status}
+                  color={getStatusChipColor(order.status)}
+                  size="small"
+                />
+              </TableCell>
+              <TableCell>
+                {calculateTotal(order.items)} ₪
               </TableCell>
               <TableCell>
                 {order.status === 'In Process' && (
-                  <Checkbox onChange={() => handleStatusChange(order._id)} checked={false} />
+                  <Checkbox
+                    onChange={() => handleStatusChange(order._id)}
+                    checked={false}
+                  />
                 )}
               </TableCell>
             </TableRow>
@@ -176,9 +194,10 @@ function StoreOwnerScreen() {
       </Table>
 
       {filteredOrders.length === 0 && (
-        <Typography sx={{ mt: 2 }}>No orders found.</Typography>
+        <Typography mt={2}>No orders found.</Typography>
       )}
 
+      {/* Order Details Popup */}
       <Dialog open={popupOpen} onClose={() => setPopupOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           Order Details
@@ -190,27 +209,20 @@ function StoreOwnerScreen() {
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-
         <DialogContent dividers>
           {selectedOrder && (
             <>
               <Typography><strong>Supplier:</strong> {selectedOrder.supplier_name}</Typography>
               <Typography><strong>Date:</strong> {new Date(selectedOrder.order_date).toLocaleString()}</Typography>
-
-              <Box display="flex" alignItems="center" mt={1}>
-                <Typography><strong>Status:</strong></Typography>
+              <Typography><strong>Status:</strong>
                 <Chip
                   label={selectedOrder.status}
                   color={getStatusChipColor(selectedOrder.status)}
                   size="small"
                   sx={{ ml: 1 }}
                 />
-              </Box>
-
-
+              </Typography>
               <Typography sx={{ mt: 3 }}><strong>Order Items:</strong></Typography>
-              
-
               <Table>
                 <TableHead>
                   <TableRow>
@@ -221,28 +233,29 @@ function StoreOwnerScreen() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {selectedOrder.items?.map((item, idx) => (
+                  {(selectedOrder.items || []).map((item, idx) => (
                     <TableRow key={idx}>
                       <TableCell>{item.product_name}</TableCell>
                       <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.price?.toFixed(2) ?? 'N/A'}</TableCell>
-                      <TableCell>{(item.quantity * item.price)?.toFixed(2)}</TableCell>
+                      <TableCell>{item.price?.toFixed(2)}</TableCell>
+                      <TableCell>{(item.price * item.quantity).toFixed(2)} ₪</TableCell>
                     </TableRow>
                   ))}
                   <TableRow>
                     <TableCell colSpan={3}><strong>Total</strong></TableCell>
-                    <TableCell><strong>{calculateTotal()} ₪</strong></TableCell>
+                    <TableCell><strong>{calculateTotal(selectedOrder.items)} ₪</strong></TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </>
           )}
         </DialogContent>
-
         <DialogActions>
           <Button onClick={() => setPopupOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Create New Order Popup will be added next */}
     </Container>
   );
 }
