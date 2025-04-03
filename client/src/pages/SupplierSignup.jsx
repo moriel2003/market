@@ -53,7 +53,7 @@ function SupplierSignup() {
     if (checked) {
       setSelectedProducts(prev => [
         ...prev,
-        { product_name: productName, price_per_unit: '', minimum_quantity: '' }
+        { product_name: productName, price : '', minimum_quantity: '' }
       ]);
     } else {
       setSelectedProducts(prev =>
@@ -110,11 +110,11 @@ function SupplierSignup() {
     let productHasError = false;
 
     selectedProducts.forEach((item, index) => {
-      const itemPrice = parseFloat(item.price_per_unit);
+      const itemPrice = parseFloat(item.price);
       const itemQty = parseInt(item.minimum_quantity);
 
       // Validate price
-      if (item.price_per_unit === '' || isNaN(itemPrice) || itemPrice <= 0) {
+      if (item.price === '' || isNaN(itemPrice) || itemPrice <= 0) {
         productErrors[index] = productErrors[index] || {};
         productErrors[index].price = 'Price must be > 0';
         productHasError = true;
@@ -137,7 +137,7 @@ function SupplierSignup() {
         ...prev,
         {
           product_name: name,
-          price_per_unit: price,
+          price: price,
           minimum_quantity: qty
         }
       ]);
@@ -230,9 +230,9 @@ function SupplierSignup() {
                         label="Price Per Unit"
                         type="number"
                         size="small"
-                        value={selectedProducts[selectedIndex].price_per_unit}
+                        value={selectedProducts[selectedIndex].price}
                         onChange={(e) =>
-                          handleProductInputChange(selectedIndex, 'price_per_unit', e.target.value)
+                          handleProductInputChange(selectedIndex, 'price', e.target.value)
                         }
                         error={!!selectedProductErrors[selectedIndex]?.price}
                         helperText={selectedProductErrors[selectedIndex]?.price}

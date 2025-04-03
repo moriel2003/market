@@ -10,7 +10,7 @@ const postNewSupplier = async (req, res) => {
     representative_name,
     username,
     password,
-    products = [] // list of { product_name, price_per_unit, minimum_quantity }
+    products = [] // list of { product_name, price, minimum_quantity }
   } = req.body;
 
   try {
@@ -19,11 +19,11 @@ const postNewSupplier = async (req, res) => {
     for (const item of products) {
       if (
         !item.product_name ||
-        !item.price_per_unit ||
+        !item.price ||
         !item.minimum_quantity ||
-        isNaN(item.price_per_unit) ||
+        isNaN(item.price) ||
         isNaN(item.minimum_quantity) ||
-        parseFloat(item.price_per_unit) <= 0 ||
+        parseFloat(item.price) <= 0 ||
         parseInt(item.minimum_quantity) <= 0
       ) {
         return res.status(400).json({ error: `Invalid product data for "${item.product_name}"` });
@@ -40,7 +40,7 @@ const postNewSupplier = async (req, res) => {
 
       cleanProducts.push({
         product_name: cleanName,
-        price_per_unit: parseFloat(item.price_per_unit),
+        price: parseFloat(item.price),
         minimum_quantity: parseInt(item.minimum_quantity)
       });
     }

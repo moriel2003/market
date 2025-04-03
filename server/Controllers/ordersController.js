@@ -1,18 +1,18 @@
 const Order = require('../models/ordersModel');
 const mongoose = require('mongoose');
 
-// GET all orders
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate('supplier_id', 'company_name') // just get the company name
+      .populate('supplier_id', 'company_name') // only get company name from supplier
       .sort({ order_date: -1 });
 
     const formattedOrders = orders.map(order => ({
       _id: order._id,
       order_date: order.order_date,
       status: order.status,
-      supplier_name: order.supplier_id?.company_name || 'Unknown'
+      supplier_name: order.supplier_id?.company_name || 'Unknown',
+      items: order.items || [] // ✅ include the full items array!
     }));
 
     res.json(formattedOrders);
@@ -21,6 +21,7 @@ const getAllOrders = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 };
+
 
 // PATCH update order status
 const updateOrderStatus = async (req, res) => {
@@ -59,9 +60,33 @@ const getOrderById = async (req, res) => {
     res.status(500).json({ error: 'Failed to get order' });
   }
 };
+// POST /Orders
+const createOrder = async (req, res) => {
+  try {
+    const { supplier_id, items } = req.body;
+
+    if (!supplier_id || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Missing supplier or items' });
+    }
+
+    const newOrder = await Order.create({
+      supplier_id,
+      items,
+      status: 'Pending Approval'
+    });
+
+    res.status(201).json(newOrder);
+  } catch (err) {
+    console.error('Failed to create order:', err);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+};
+
 
 module.exports = {
   getAllOrders,
   updateOrderStatus,
   getOrderById,
+  createOrder,
+  
 };

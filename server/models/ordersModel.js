@@ -9,6 +9,10 @@ const OrderItemSchema = new mongoose.Schema({
   quantity: {
     type: Number,
     required: true
+  },
+  price: { // ✅ Price at the time of the order
+    type: Number,
+    required: true
   }
 });
 
@@ -27,7 +31,7 @@ const OrderSchema = new mongoose.Schema({
     enum: ['Pending Approval', 'In Process', 'Completed'],
     default: 'Pending Approval'
   },
-  items: [OrderItemSchema] // ✅ Embedded array of items
+  items: [OrderItemSchema] // ✅ Embedded array of items with price
 });
 
 module.exports = mongoose.model('Order', OrderSchema);
