@@ -5,7 +5,7 @@ const {
   getAllSuppliers,
   getSupplierByID,
   loginSupplier
-} = require('../controllers/suppliersController');
+} = require('../Controllers/suppliersController');
 
 router.post('/', postNewSupplier);
 router.get('/', getAllSuppliers);

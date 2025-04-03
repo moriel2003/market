@@ -1,85 +1,68 @@
 import { useState } from 'react';
 import {
-  Box,
-  Button,
   Container,
-  Paper,
   TextField,
+  Button,
   Typography,
-  Link
+  Box
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from '../api/axiosInstance';
 
-function Login() {
-  const [form, setForm] = useState({ username: '', password: '' });
+function Login({ isStoreOwner }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleLogin = async () => {
+    setError('');
+    const endpoint = isStoreOwner ? '/StoreOwner/login' : '/Suppliers/login';
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
     try {
-      const res = await axios.post('/Suppliers/login', form);
-      localStorage.setItem('supplierId', res.data._id);
-      navigate('/orders');
+      const res = await axios.post(endpoint, { username, password });
+      const userId = res.data._id;
+
+      if (isStoreOwner) {
+        localStorage.setItem('storeOwnerId', userId);
+        navigate('/store-owner');
+      } else {
+        localStorage.setItem('supplierId', userId);
+        navigate('/supplier/orders');
+      }
     } catch (err) {
-      alert(err.response?.data?.error || 'Login failed');
+      setError('Invalid username or password');
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(to right, #f5f7fa, #c3cfe2)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-      }}
-    >
-      <Container maxWidth="xs">
-        <Paper elevation={6} sx={{ padding: 4, borderRadius: 3 }}>
-          <Typography variant="h5" align="center" gutterBottom>
-            Supplier Login
+    <Container maxWidth="xs" sx={{ mt: 8 }}>
+      <Typography variant="h4" align="center" gutterBottom>
+        {isStoreOwner ? 'Store Owner Login' : 'Supplier Login'}
+      </Typography>
+      <Box display="flex" flexDirection="column" gap={2}>
+        <TextField
+          label="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <TextField
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        {error && <Typography color="error">{error}</Typography>}
+        <Button variant="contained" onClick={handleLogin}>
+          Login
+        </Button>
+        {!isStoreOwner && (
+          <Typography variant="body2" align="center">
+            Don’t have an account? <Link to="/supplier/signup">Sign up</Link>
           </Typography>
-
-          <form onSubmit={handleLogin}>
-            <TextField
-              label="Username"
-              name="username"
-              fullWidth
-              value={form.username}
-              onChange={handleChange}
-              required
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Password"
-              name="password"
-              type="password"
-              fullWidth
-              value={form.password}
-              onChange={handleChange}
-              required
-              sx={{ mb: 2 }}
-            />
-            <Button type="submit" variant="contained" fullWidth>
-              Login
-            </Button>
-          </form>
-
-          <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-            Don&apos;t have an account?{' '}
-            <Link href="/SupplierSignup" underline="hover">
-              Sign up
-            </Link>
-          </Typography>
-        </Paper>
-      </Container>
-    </Box>
+        )}
+      </Box>
+    </Container>
   );
 }
 

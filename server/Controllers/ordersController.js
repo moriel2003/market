@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate('supplier_id', 'company_name') // only get company name from supplier
+      .populate('supplier_id', 'company_name') // get company name from supplier
       .sort({ order_date: -1 });
 
     const formattedOrders = orders.map(order => ({
@@ -13,7 +13,7 @@ const getAllOrders = async (req, res) => {
       order_date: order.order_date,
       status: order.status,
       supplier_name: order.supplier_id?.company_name || 'Unknown',
-      items: order.items || [] // ✅ include the full items array!
+      items: order.items || [] 
     }));
 
     res.json(formattedOrders);
@@ -42,7 +42,7 @@ const updateOrderStatus = async (req, res) => {
           supply.current_quantity += item.quantity;
           await supply.save();
         } else {
-          console.warn(`⚠️ No supply entry found for ${item.product_name}`);
+          console.warn(`No supply entry found for ${item.product_name}`);
         }
       }
     }
@@ -60,7 +60,7 @@ const updateOrderStatus = async (req, res) => {
 
 const getOrderById = async (req, res) => {
   const { id } = req.params;
-  console.log('✅ getOrderById CALLED with ID:', id);
+  console.log('getOrderById CALLED with ID:', id);
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: 'Invalid order ID' });
@@ -71,7 +71,7 @@ const getOrderById = async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Order not found' });
     res.status(200).json(order);
   } catch (err) {
-    console.error('❌ Error in getOrderById:', err);
+    console.error('Error in getOrderById:', err);
     res.status(500).json({ error: 'Failed to get order' });
   }
 };

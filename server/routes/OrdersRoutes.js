@@ -8,10 +8,10 @@ const {
   createOrder,
 } = require('../Controllers/ordersController');
 
-router.get('/', getAllOrders);               // list all orders
-router.get('/:id', getOrderById);            // 🟢 get single order
-router.patch('/:id', updateOrderStatus);     // update status
-router.post('/', createOrder); // ✅ add this
+router.get('/', getAllOrders);          
+router.get('/:id', getOrderById);          
+router.patch('/:id', updateOrderStatus);     
+router.post('/', createOrder); 
 
 module.exports = router;
 

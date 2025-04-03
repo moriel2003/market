@@ -20,7 +20,6 @@ import {
   IconButton,
   Button,
   Chip,
-  Tooltip,
   Box
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -29,7 +28,6 @@ import axios from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 
 function StoreOwnerScreen() {
-  
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -38,10 +36,8 @@ function StoreOwnerScreen() {
   const [suppliersList, setSuppliersList] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [popupOpen, setPopupOpen] = useState(false);
-  
-const navigate = useNavigate();
 
-
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchOrders();
@@ -55,8 +51,8 @@ const navigate = useNavigate();
     try {
       const res = await axios.get('/Orders');
       setOrders(res.data);
-      const uniqueSuppliers = [...new Set(res.data.map(o => o.supplier_name).filter(Boolean))];
-      setSuppliersList(uniqueSuppliers);
+      const names = [...new Set(res.data.map(o => o.supplier_name).filter(Boolean))];
+      setSuppliersList(names);
     } catch (err) {
       console.error('Error fetching orders:', err);
     }
@@ -64,14 +60,14 @@ const navigate = useNavigate();
 
   const applyFilters = () => {
     let data = [...orders];
-    if (statusFilter !== 'All') data = data.filter(order => order.status === statusFilter);
-    if (supplierFilter !== 'All') data = data.filter(order => order.supplier_name === supplierFilter);
+    if (statusFilter !== 'All') data = data.filter(o => o.status === statusFilter);
+    if (supplierFilter !== 'All') data = data.filter(o => o.supplier_name === supplierFilter);
     if (sortBy === 'date') data.sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
     else if (sortBy === 'supplier') data.sort((a, b) => (a.supplier_name || '').localeCompare(b.supplier_name || ''));
     setFilteredOrders(data);
   };
 
-  const handleStatusChange = async (orderId) => {
+  const updateStatus = async (orderId) => {
     try {
       await axios.patch(`/Orders/${orderId}`, { status: 'Completed' });
       fetchOrders();
@@ -80,7 +76,7 @@ const navigate = useNavigate();
     }
   };
 
-  const getStatusChipColor = (status) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case 'Pending Approval': return 'default';
       case 'In Process': return 'warning';
@@ -89,24 +85,21 @@ const navigate = useNavigate();
     }
   };
 
-  const calculateTotal = (items) => {
-    if (!items || items.length === 0) return '0.00';
-    return items.reduce((total, item) => total + (item.price || 0) * (item.quantity || 0), 0).toFixed(2);
+  const calcTotal = (items) => {
+    if (!items || !items.length) return '0.00';
+    return items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0).toFixed(2);
   };
 
   return (
     <Container sx={{ mt: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h4">Store Owner Screen</Typography>
-        <Box display="flex" flexDirection="column" alignItems="center">
-        <IconButton color="primary" onClick={() => navigate('/store/create-order')}>
-  <AddIcon />
-</IconButton>
-  <Typography variant="caption" color="textSecondary">
-    Make New Order
-  </Typography>
-</Box>
-
+        <Box textAlign="center">
+          <IconButton color="primary" onClick={() => navigate('/store-owner/create-order')}>
+            <AddIcon />
+          </IconButton>
+          <Typography variant="caption">Make New Order</Typography>
+        </Box>
       </Box>
 
       {/* Filters */}
@@ -114,7 +107,7 @@ const navigate = useNavigate();
         <Grid xs={4}>
           <FormControl fullWidth>
             <InputLabel>Status</InputLabel>
-            <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>
+            <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <MenuItem value="All">All</MenuItem>
               <MenuItem value="Pending Approval">Pending Approval</MenuItem>
               <MenuItem value="In Process">In Process</MenuItem>
@@ -125,7 +118,7 @@ const navigate = useNavigate();
         <Grid xs={4}>
           <FormControl fullWidth>
             <InputLabel>Sort By</InputLabel>
-            <Select value={sortBy} label="Sort By" onChange={(e) => setSortBy(e.target.value)}>
+            <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <MenuItem value="date">Date</MenuItem>
               <MenuItem value="supplier">Supplier</MenuItem>
             </Select>
@@ -134,10 +127,10 @@ const navigate = useNavigate();
         <Grid xs={4}>
           <FormControl fullWidth>
             <InputLabel>Choose Supplier</InputLabel>
-            <Select value={supplierFilter} label="Choose Supplier" onChange={(e) => setSupplierFilter(e.target.value)}>
+            <Select value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)}>
               <MenuItem value="All">All Suppliers</MenuItem>
-              {suppliersList.map((name, idx) => (
-                <MenuItem key={idx} value={name}>{name}</MenuItem>
+              {suppliersList.map((name, i) => (
+                <MenuItem key={i} value={name}>{name}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -148,16 +141,16 @@ const navigate = useNavigate();
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Order #</TableCell>
+            <TableCell>#</TableCell>
             <TableCell>Supplier</TableCell>
             <TableCell>Date</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>Total</TableCell>
-            <TableCell>Mark as Completed</TableCell>
+            <TableCell>Mark Complete</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredOrders.map((order, index) => (
+          {filteredOrders.map((order, i) => (
             <TableRow key={order._id}>
               <TableCell
                 sx={{ cursor: 'pointer', color: 'blue' }}
@@ -166,26 +159,17 @@ const navigate = useNavigate();
                   setPopupOpen(true);
                 }}
               >
-                {index + 1}
+                {i + 1}
               </TableCell>
               <TableCell>{order.supplier_name}</TableCell>
               <TableCell>{new Date(order.order_date).toLocaleString()}</TableCell>
               <TableCell>
-                <Chip
-                  label={order.status}
-                  color={getStatusChipColor(order.status)}
-                  size="small"
-                />
+                <Chip label={order.status} color={getStatusColor(order.status)} size="small" />
               </TableCell>
-              <TableCell>
-                {calculateTotal(order.items)} ₪
-              </TableCell>
+              <TableCell>{calcTotal(order.items)} ₪</TableCell>
               <TableCell>
                 {order.status === 'In Process' && (
-                  <Checkbox
-                    onChange={() => handleStatusChange(order._id)}
-                    checked={false}
-                  />
+                  <Checkbox onChange={() => updateStatus(order._id)} />
                 )}
               </TableCell>
             </TableRow>
@@ -197,12 +181,11 @@ const navigate = useNavigate();
         <Typography mt={2}>No orders found.</Typography>
       )}
 
-      {/* Order Details Popup */}
+      {/* Popup */}
       <Dialog open={popupOpen} onClose={() => setPopupOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           Order Details
           <IconButton
-            aria-label="close"
             onClick={() => setPopupOpen(false)}
             sx={{ position: 'absolute', right: 8, top: 8 }}
           >
@@ -214,27 +197,20 @@ const navigate = useNavigate();
             <>
               <Typography><strong>Supplier:</strong> {selectedOrder.supplier_name}</Typography>
               <Typography><strong>Date:</strong> {new Date(selectedOrder.order_date).toLocaleString()}</Typography>
-              <Typography><strong>Status:</strong>
-                <Chip
-                  label={selectedOrder.status}
-                  color={getStatusChipColor(selectedOrder.status)}
-                  size="small"
-                  sx={{ ml: 1 }}
-                />
-              </Typography>
+              <Typography><strong>Status:</strong> <Chip label={selectedOrder.status} color={getStatusColor(selectedOrder.status)} size="small" sx={{ ml: 1 }} /></Typography>
               <Typography sx={{ mt: 3 }}><strong>Order Items:</strong></Typography>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>Product</TableCell>
                     <TableCell>Quantity</TableCell>
-                    <TableCell>Price per Unit</TableCell>
+                    <TableCell>Price</TableCell>
                     <TableCell>Total</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {(selectedOrder.items || []).map((item, idx) => (
-                    <TableRow key={idx}>
+                  {selectedOrder.items?.map((item, i) => (
+                    <TableRow key={i}>
                       <TableCell>{item.product_name}</TableCell>
                       <TableCell>{item.quantity}</TableCell>
                       <TableCell>{item.price?.toFixed(2)}</TableCell>
@@ -243,7 +219,7 @@ const navigate = useNavigate();
                   ))}
                   <TableRow>
                     <TableCell colSpan={3}><strong>Total</strong></TableCell>
-                    <TableCell><strong>{calculateTotal(selectedOrder.items)} ₪</strong></TableCell>
+                    <TableCell><strong>{calcTotal(selectedOrder.items)} ₪</strong></TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -254,8 +230,6 @@ const navigate = useNavigate();
           <Button onClick={() => setPopupOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-
-      {/* Create New Order Popup will be added next */}
     </Container>
   );
 }

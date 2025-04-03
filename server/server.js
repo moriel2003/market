@@ -29,7 +29,7 @@ app.use('/supply', supplyRoutes);
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('Connected to MongoDB');
-    //after conecting to db start listening to incoming requestes
+    //start listening to incoming requestes
     const PORT=process.env.PORT
     app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

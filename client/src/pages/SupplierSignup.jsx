@@ -16,156 +16,175 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from '../api/axiosInstance';
+import { useNavigate } from 'react-router-dom';
 
 function SupplierSignup() {
   const [form, setForm] = useState({
-    company_name: '',
-    phone: '',
-    representative_name: '',
-    username: '',
-    password: ''
+    company_name: '', phone: '', representative_name: '', username: '', password: ''
   });
-
+  const [formErrors, setFormErrors] = useState({});
   const [productsList, setProductsList] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [selectedProductErrors, setSelectedProductErrors] = useState({});
-  const [otherProduct, setOtherProduct] = useState({ name: '', price: '', qty: '' });
-  const [otherError, setOtherError] = useState({ name: '', price: '', qty: '' });
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [productErrors, setProductErrors] = useState({});
+  const [customProduct, setCustomProduct] = useState({ name: '', price_per_unit: '', qty: '' });
+  const [customError, setCustomError] = useState({});
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await axios.get('/Products');
-        setProductsList(res.data);
-      } catch (err) {
-        console.error('Failed to fetch products:', err);
-      }
-    };
-    fetchProducts();
+    axios.get('/Products').then(res => setProductsList(res.data)).catch(console.error);
   }, []);
 
-  const handleFormChange = (e) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleFormChange = e => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setFormErrors({ ...formErrors, [e.target.name]: '' });
   };
 
-  const handleProductCheck = (productName, checked) => {
+  const toggleProduct = (name, checked) => {
     if (checked) {
-      setSelectedProducts(prev => [
-        ...prev,
-        { product_name: productName, price : '', minimum_quantity: '' }
-      ]);
+      setSelectedProducts(prev => [...prev, { product_name: name, price_per_unit: '', minimum_quantity: '' }]);
     } else {
-      setSelectedProducts(prev =>
-        prev.filter(p => p.product_name !== productName)
-      );
-    }
-  };
-
-  const handleProductInputChange = (index, field, value) => {
-    setSelectedProducts(prev => {
-      const updated = [...prev];
-      updated[index][field] = value;
-      return updated;
-    });
-  };
-
-  const handleOtherChange = (e) => {
-    const { name, value } = e.target;
-    setOtherProduct(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleProductsSubmit = () => {
-    const name = otherProduct.name.trim().toLowerCase();
-    const price = parseFloat(otherProduct.price);
-    const qty = parseInt(otherProduct.qty);
-
-    setOtherError({ name: '', price: '', qty: '' });
-    setSelectedProductErrors({});
-
-    let hasError = false;
-
-    if (name) {
-      const nameExistsInSystem = productsList.some(p => p.name === name);
-      const nameExistsInSelected = selectedProducts.some(p => p.product_name === name);
-
-      if (nameExistsInSystem || nameExistsInSelected) {
-        setOtherError(prev => ({ ...prev, name: `"${name}" is already listed` }));
-        hasError = true;
-      }
-
-      if (isNaN(price) || price <= 0) {
-        setOtherError(prev => ({ ...prev, price: 'Enter valid price > 0' }));
-        hasError = true;
-      }
-
-      if (isNaN(qty) || qty <= 0) {
-        setOtherError(prev => ({ ...prev, qty: 'Enter valid quantity > 0' }));
-        hasError = true;
-      }
-    }
-
-    // ✅ Validate all selected products
-    let productErrors = {};
-    let productHasError = false;
-
-    selectedProducts.forEach((item, index) => {
-      const itemPrice = parseFloat(item.price);
-      const itemQty = parseInt(item.minimum_quantity);
-
-      // Validate price
-      if (item.price === '' || isNaN(itemPrice) || itemPrice <= 0) {
-        productErrors[index] = productErrors[index] || {};
-        productErrors[index].price = 'Price must be > 0';
-        productHasError = true;
-      }
-
-      // Validate quantity
-      if (item.minimum_quantity === '' || isNaN(itemQty) || itemQty <= 0) {
-        productErrors[index] = productErrors[index] || {};
-        productErrors[index].qty = 'Quantity must be > 0';
-        productHasError = true;
-      }
-    });
-
-    setSelectedProductErrors(productErrors);
-
-    if (hasError || productHasError) return;
-
-    if (name) {
-      setSelectedProducts(prev => [
-        ...prev,
-        {
-          product_name: name,
-          price: price,
-          minimum_quantity: qty
-        }
-      ]);
-      setOtherProduct({ name: '', price: '', qty: '' });
-    }
-
-    setDialogOpen(false);
-  };
-
-  const handleSubmit = async () => {
-    try {
-      await axios.post('/Suppliers', {
-        ...form,
-        products: selectedProducts
+      setSelectedProducts(prev => prev.filter(p => p.product_name !== name));
+      setProductErrors(prev => {
+        const updated = { ...prev };
+        const index = selectedProducts.findIndex(p => p.product_name === name);
+        delete updated[index];
+        return updated;
       });
-      alert('Supplier registered successfully!');
-    } catch (err) {
-      console.error('Signup failed:', err);
-      alert('Signup failed');
     }
   };
+
+  const updateProductField = (i, field, value) => {
+    const copy = [...selectedProducts];
+    copy[i][field] = value;
+    setSelectedProducts(copy);
+
+    const updatedErrors = { ...productErrors };
+    const price_per_unit = parseFloat(field === 'price_per_unit' ? value : copy[i].price_per_unit);
+    const qty = parseInt(field === 'minimum_quantity' ? value : copy[i].minimum_quantity);
+    const err = {};
+
+    if (!price_per_unit || price_per_unit <= 0) err.price_per_unit = 'price_per_unit must be > 0';
+    if (qty < 0 || isNaN(qty)) err.qty = 'Quantity must be ≥ 0';
+
+    if (Object.keys(err).length > 0) {
+      updatedErrors[i] = err;
+    } else {
+      delete updatedErrors[i];
+    }
+
+    setProductErrors(updatedErrors);
+  };
+
+  const handleCustomChange = e => {
+    setCustomProduct({ ...customProduct, [e.target.name]: e.target.value });
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    Object.entries(form).forEach(([key, value]) => {
+      if (!value.trim()) {
+        errors[key] = 'Required';
+      }
+    });
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateProducts = () => {
+    let hasErr = false;
+    const errMap = {};
+
+    selectedProducts.forEach((p, i) => {
+      const price_per_unit = parseFloat(p.price_per_unit);
+      const qty = parseInt(p.minimum_quantity);
+      const err = {};
+
+      if (!price_per_unit || price_per_unit <= 0) err.price_per_unit = 'price_per_unit must be > 0';
+      if (qty < 0 || isNaN(qty)) err.qty = 'Quantity must be ≥ 0';
+
+      if (Object.keys(err).length > 0) {
+        errMap[i] = err;
+        hasErr = true;
+      }
+    });
+
+    setProductErrors(errMap);
+    return !hasErr;
+  };
+
+  const handleAddCustomProduct = () => {
+    const name = customProduct.name.trim().toLowerCase();
+    const price_per_unit = parseFloat(customProduct.price_per_unit);
+    const qty = parseInt(customProduct.qty);
+    const errors = {};
+
+    if (!name) {
+      setOpen(false);
+      setCustomProduct({ name: '', price_per_unit: '', qty: '' });
+      setCustomError({});
+      return;
+    }
+
+    if (productsList.some(p => p.name === name) || selectedProducts.some(p => p.product_name === name)) {
+      errors.name = 'Name is already listed';
+    }
+    if (!price_per_unit || price_per_unit <= 0) errors.price_per_unit = 'Enter valid price_per_unit';
+    if (qty < 0 || isNaN(qty)) errors.qty = 'Enter valid quantity';
+
+    if (Object.keys(errors).length > 0) {
+      setCustomError(errors);
+      return;
+    }
+
+    setSelectedProducts([...selectedProducts, {
+      product_name: name,
+      price_per_unit_per_unit: price_per_unit,
+
+      minimum_quantity: qty
+    }]);
+
+    setCustomProduct({ name: '', price_per_unit: '', qty: '' });
+    setCustomError({});
+    setOpen(false);
+  };
+
+const handleSubmit = async () => {
+  if (!validateForm() || !validateProducts()) return;
+  try {
+    const supplier = {
+      ...form,
+      products: selectedProducts.map(p => ({
+        product_name: p.product_name,
+        price_per_unit: Number(p.price_per_unit),
+        minimum_quantity: Number(p.minimum_quantity)
+      }))
+    };
+    
+
+
+
+    const res = await axios.post('/Suppliers', supplier);
+    
+    localStorage.setItem('supplierId', res.data._id);
+    navigate('/supplier/Orders');
+  } catch (err) {
+    const message = err?.response?.data?.message || '';
+    if (message.toLowerCase().includes('username')) {
+      setFormErrors(prev => ({ ...prev, username: 'Username may already be taken' }));
+    } else {
+      alert('Signup failed. Please try again.');
+    }
+  }
+};
+
 
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>Supplier Signup</Typography>
 
       <Grid container spacing={2}>
-        {['company_name', 'phone', 'representative_name', 'username', 'password'].map((field) => (
+        {Object.keys(form).map((field) => (
           <Grid item xs={12} sm={6} key={field}>
             <TextField
               fullWidth
@@ -174,81 +193,63 @@ function SupplierSignup() {
               type={field === 'password' ? 'password' : 'text'}
               value={form[field]}
               onChange={handleFormChange}
+              error={!!formErrors[field]}
+              helperText={formErrors[field]}
             />
           </Grid>
         ))}
       </Grid>
 
       <Box sx={{ mt: 4 }}>
-        <Button variant="outlined" onClick={() => setDialogOpen(true)}>
+        <Button variant="outlined" onClick={() => setOpen(true)}>
           Add products you provide
         </Button>
       </Box>
 
-      <Button
-        variant="contained"
-        color="primary"
-        sx={{ mt: 4 }}
-        onClick={handleSubmit}
-      >
+      <Button variant="contained" sx={{ mt: 4 }} onClick={handleSubmit}>
         Sign Up
       </Button>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
-          Select Products You Provide
-          <IconButton
-            aria-label="close"
-            onClick={() => setDialogOpen(false)}
-            sx={{ position: 'absolute', right: 8, top: 8, color: 'gray' }}
-          >
+          Select Products
+          <IconButton onClick={() => setOpen(false)} sx={{ position: 'absolute', right: 8, top: 8 }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-
         <DialogContent dividers>
-          <Typography variant="subtitle1">Choose from existing products:</Typography>
+          <Typography variant="subtitle1">Choose existing products:</Typography>
           {productsList.map(product => {
-            const selectedIndex = selectedProducts.findIndex(p => p.product_name === product.name);
-            const selected = selectedIndex !== -1;
-
+            const index = selectedProducts.findIndex(p => p.product_name === product.name);
+            const selected = index !== -1;
             return (
               <Box key={product._id} sx={{ mb: 2 }}>
                 <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={selected}
-                      onChange={(e) => handleProductCheck(product.name, e.target.checked)}
-                    />
-                  }
+                  control={<Checkbox checked={selected} onChange={e => toggleProduct(product.name, e.target.checked)} />}
                   label={product.name}
                 />
                 {selected && (
                   <Grid container spacing={1} sx={{ pl: 4 }}>
                     <Grid item xs={6} sm={3}>
                       <TextField
-                        label="Price Per Unit"
+                        label="price_per_unit"
                         type="number"
                         size="small"
-                        value={selectedProducts[selectedIndex].price}
-                        onChange={(e) =>
-                          handleProductInputChange(selectedIndex, 'price', e.target.value)
-                        }
-                        error={!!selectedProductErrors[selectedIndex]?.price}
-                        helperText={selectedProductErrors[selectedIndex]?.price}
+                        value={selectedProducts[index].price_per_unit}
+                        onChange={e => updateProductField(index, 'price_per_unit', e.target.value)}
+                        error={!!productErrors[index]?.price_per_unit}
+                        helperText={productErrors[index]?.price_per_unit}
                       />
                     </Grid>
                     <Grid item xs={6} sm={3}>
                       <TextField
-                        label="Min Quantity"
+                        label="Min Qty"
                         type="number"
                         size="small"
-                        value={selectedProducts[selectedIndex].minimum_quantity}
-                        onChange={(e) =>
-                          handleProductInputChange(selectedIndex, 'minimum_quantity', e.target.value)
-                        }
-                        error={!!selectedProductErrors[selectedIndex]?.qty}
-                        helperText={selectedProductErrors[selectedIndex]?.qty}
+                        value={selectedProducts[index].minimum_quantity}
+                        onChange={e => updateProductField(index, 'minimum_quantity', e.target.value)}
+                        error={!!productErrors[index]?.qty}
+                        helperText={productErrors[index]?.qty}
                       />
                     </Grid>
                   </Grid>
@@ -258,27 +259,27 @@ function SupplierSignup() {
           })}
 
           <Box sx={{ mt: 4 }}>
-            <Typography variant="subtitle1">Other Product</Typography>
+            <Typography variant="subtitle1">Add your own product:</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
                 <TextField
                   label="Product Name"
                   name="name"
-                  value={otherProduct.name}
-                  onChange={handleOtherChange}
-                  error={!!otherError.name}
-                  helperText={otherError.name}
+                  value={customProduct.name}
+                  onChange={handleCustomChange}
+                  error={!!customError.name}
+                  helperText={customError.name}
                 />
               </Grid>
               <Grid item xs={6} sm={4}>
                 <TextField
-                  label="Price"
+                  label="price_per_unit"
                   type="number"
-                  name="price"
-                  value={otherProduct.price}
-                  onChange={handleOtherChange}
-                  error={!!otherError.price}
-                  helperText={otherError.price}
+                  name="price_per_unit"
+                  value={customProduct.price_per_unit}
+                  onChange={handleCustomChange}
+                  error={!!customError.price_per_unit}
+                  helperText={customError.price_per_unit}
                 />
               </Grid>
               <Grid item xs={6} sm={4}>
@@ -286,20 +287,17 @@ function SupplierSignup() {
                   label="Min Qty"
                   type="number"
                   name="qty"
-                  value={otherProduct.qty}
-                  onChange={handleOtherChange}
-                  error={!!otherError.qty}
-                  helperText={otherError.qty}
+                  value={customProduct.qty}
+                  onChange={handleCustomChange}
+                  error={!!customError.qty}
+                  helperText={customError.qty}
                 />
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
-
         <DialogActions>
-          <Button onClick={handleProductsSubmit} variant="contained" color="primary">
-            Confirm
-          </Button>
+          <Button onClick={handleAddCustomProduct} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
     </Container>
