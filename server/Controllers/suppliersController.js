@@ -13,7 +13,7 @@ const postNewSupplier = async (req, res) => {
       password,
       products,
     } = req.body;
-console.log('BODY RECEIVED:', req.body);
+
 
     // Basic required field check
     if (!company_name || !phone || !representative_name || !username || !password) {
@@ -48,15 +48,16 @@ console.log('BODY RECEIVED:', req.body);
         minimum_quantity: parseInt(item.minimum_quantity),
       });
     }
-
+    const hashedPassword = await bcrypt.hash(password, 10);
     const supplier = new Supplier({
       company_name,
       phone,
       representative_name,
       username,
-      password,
-      products: cleanProducts,
+      password: hashedPassword,
+      products: cleanProducts
     });
+    
 
     await supplier.save();
     res.status(201).json(supplier);
@@ -74,13 +75,15 @@ const loginSupplier = async (req, res) => {
     const supplier = await Supplier.findOne({ username });
 
     if (!supplier) {
-      return res.status(400).json({ error: 'Invalid username or password' });
+      return res.status(402).json({ error: 'Invalid username or password' });
     }
 
     const isMatch = await bcrypt.compare(password, supplier.password);
+    console.log(password, supplier.password);
+    console.log(isMatch);
 
     if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: 'Invalid username or password!' });
       
     }
 
