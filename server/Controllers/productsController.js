@@ -9,5 +9,25 @@ const getAllProducts = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch products' });
   }
 };
+const addProduct = async (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Product name required' });
+  }
 
-module.exports = { getAllProducts };
+  try {
+    const cleanName = name.trim().toLowerCase();
+    const existing = await Product.findOne({ name: cleanName });
+    if (existing) {
+      return res.status(409).json({ error: 'Product already exists' });
+    }
+
+    const newProduct = await Product.create({ name: cleanName });
+    res.status(201).json(newProduct);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add product' });
+  }
+};
+
+
+module.exports = { getAllProducts,addProduct };

@@ -16,17 +16,23 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  IconButton
+  IconButton,
+  Button
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from '../api/axiosInstance';
+import { useNavigate } from 'react-router-dom';
+import ProductSelector from '../components/ProductSelector';
 
 function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [supplierProducts, setSupplierProducts] = useState([]);
   const supplierId = localStorage.getItem('supplierId');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -43,8 +49,23 @@ function Orders() {
       }
     };
 
+    const fetchSupplierProducts = async () => {
+      try {
+        const res = await axios.get(`/Suppliers/${supplierId}`);
+        setSupplierProducts(res.data?.products || []);
+      } catch (err) {
+        console.error('Failed to fetch supplier products:', err);
+      }
+    };
+
     fetchOrders();
+    fetchSupplierProducts();
   }, [supplierId]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('supplierId');
+    navigate('/login');
+  };
 
   const handleStatusChange = async (orderId) => {
     try {
@@ -69,6 +90,17 @@ function Orders() {
     }
   };
 
+  const handleAddProducts = async (products) => {
+    try {
+      await axios.post(`/Suppliers/${supplierId}/products`, { products });
+      alert('Products added successfully!');
+      setAddProductOpen(false);
+    } catch (err) {
+      console.error('Failed to add products:', err);
+      alert('Failed to add products');
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -79,9 +111,13 @@ function Orders() {
 
   return (
     <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Your Orders
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="h4">Your Orders</Typography>
+        <Stack direction="row" spacing={2}>
+          <Button variant="outlined" onClick={() => setAddProductOpen(true)}>Add Products</Button>
+          <Button variant="contained" color="error" onClick={handleLogout}>Logout</Button>
+        </Stack>
+      </Box>
 
       {orders.length === 0 ? (
         <Typography>No orders found.</Typography>
@@ -126,19 +162,13 @@ function Orders() {
         </TableContainer>
       )}
 
-      {/* Order Details Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
           Order Details
           <IconButton
             aria-label="close"
             onClick={() => setDialogOpen(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
           >
             <CloseIcon />
           </IconButton>
@@ -148,7 +178,6 @@ function Orders() {
             <>
               <Typography><strong>Status:</strong> {selectedOrder.status}</Typography>
               <Typography><strong>Date:</strong> {new Date(selectedOrder.order_date).toLocaleString()}</Typography>
-
               <Typography sx={{ mt: 2, mb: 1 }}><strong>Items:</strong></Typography>
               <Table size="small">
                 <TableHead>
@@ -170,6 +199,14 @@ function Orders() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ProductSelector
+        open={addProductOpen}
+        onClose={() => setAddProductOpen(false)}
+        onSubmit={handleAddProducts}
+        title="Add Products"
+        initialSelected={supplierProducts}
+      />
     </Container>
   );
 }

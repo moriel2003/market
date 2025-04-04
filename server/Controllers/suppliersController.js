@@ -3,6 +3,41 @@ const Product = require('../models/productsModel');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
+
+const updateSupplierProducts = async (req, res) => {
+  const supplierId = req.params.id;
+  const { products } = req.body;
+
+  if (!Array.isArray(products)) {
+    return res.status(400).json({ error: 'Products must be an array' });
+  }
+
+  try {
+    const supplier = await Supplier.findById(supplierId);
+    if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
+
+    for (const incoming of products) {
+      const existingIndex = supplier.products.findIndex(
+        p => p.product_name === incoming.product_name
+      );
+
+      if (existingIndex !== -1) {
+        // Update price and quantity
+        supplier.products[existingIndex].price_per_unit = incoming.price_per_unit;
+        supplier.products[existingIndex].minimum_quantity = incoming.minimum_quantity;
+      } else {
+        supplier.products.push(incoming);
+      }
+    }
+
+    await supplier.save();
+    res.status(200).json({ message: 'Products added/updated successfully' });
+  } catch (err) {
+    console.error('Error updating supplier products:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 const postNewSupplier = async (req, res) => {
   try {
     const {
@@ -20,34 +55,35 @@ const postNewSupplier = async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    if (!Array.isArray(products) || products.length === 0) {
-      return res.status(400).json({ error: 'At least one product must be provided' });
-    }
+
 
     const cleanProducts = [];
 
-    for (let item of products) {
-      const cleanName = item.product_name?.trim().toLowerCase();
-      if (
-        !cleanName ||
-        item.price_per_unit === undefined ||
-        item.minimum_quantity === undefined ||
-        isNaN(item.price_per_unit) ||
-        isNaN(item.minimum_quantity) ||
-        parseFloat(item.price_per_unit) <= 0 ||
-        parseInt(item.minimum_quantity) <= 0
-      ) {
-        return res
-          .status(400)
-          .json({ error: `Invalid product data for "${item.product_name}"` });
+    if (Array.isArray(products)) {
+      for (let item of products) {
+        const cleanName = item.product_name?.trim().toLowerCase();
+        if (
+          !cleanName ||
+          item.price_per_unit === undefined ||
+          item.minimum_quantity === undefined ||
+          isNaN(item.price_per_unit) ||
+          isNaN(item.minimum_quantity) ||
+          parseFloat(item.price_per_unit) <= 0 ||
+          parseInt(item.minimum_quantity) <= 0
+        ) {
+          return res
+            .status(400)
+            .json({ error: `Invalid product data for "${item.product_name}"` });
+        }
+    
+        cleanProducts.push({
+          product_name: cleanName,
+          price_per_unit: parseFloat(item.price_per_unit),
+          minimum_quantity: parseInt(item.minimum_quantity),
+        });
       }
-
-      cleanProducts.push({
-        product_name: cleanName,
-        price_per_unit: parseFloat(item.price_per_unit),
-        minimum_quantity: parseInt(item.minimum_quantity),
-      });
     }
+    
     const hashedPassword = await bcrypt.hash(password, 10);
     const supplier = new Supplier({
       company_name,
@@ -62,10 +98,16 @@ const postNewSupplier = async (req, res) => {
     await supplier.save();
     res.status(201).json(supplier);
   } catch (err) {
-    console.error('Supplier creation failed:', err); // already there
+    console.error('Supplier creation failed: ', err);
+
+    if (err.code === 11000 && err.keyValue) {
+      const duplicateField = Object.keys(err.keyValue)[0]; // 'phone' or 'username'
+      return res.status(400).json({ error: `${duplicateField} already exists` });
+    }
+
     res.status(500).json({ error: err.message || 'Server error during supplier creation' });
   }
-  
+
 };
 //  Login an existing supplier
 const loginSupplier = async (req, res) => {
@@ -96,7 +138,7 @@ const loginSupplier = async (req, res) => {
   }
 };
 
-// 🔹 Get all suppliers
+//Get all suppliers
 const getAllSuppliers = async (req, res) => {
   try {
     const allSuppliers = await Supplier.find({});
@@ -129,5 +171,6 @@ module.exports = {
   postNewSupplier,
   loginSupplier,
   getAllSuppliers,
-  getSupplierByID
+  getSupplierByID,
+  updateSupplierProducts
 };

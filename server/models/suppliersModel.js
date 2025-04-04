@@ -22,7 +22,8 @@ const SupplierSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
   representative_name: {
     type: String,
@@ -33,11 +34,14 @@ const SupplierSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  
+
+
   password: {
     type: String,
     required: true
   },
-  products: [SupplierProductSchema] // embedded list of supplier's product details
+  products: [SupplierProductSchema] //  list of supplier's product details
 });
 
 module.exports = mongoose.model('Supplier', SupplierSchema);

@@ -10,7 +10,7 @@ const OrderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  price: { // ✅ Price at the time of the order
+  price: { 
     type: Number,
     required: true
   }
@@ -31,7 +31,7 @@ const OrderSchema = new mongoose.Schema({
     enum: ['Pending Approval', 'In Process', 'Completed'],
     default: 'Pending Approval'
   },
-  items: [OrderItemSchema] // ✅ Embedded array of items with price
+  items: [OrderItemSchema] 
 });
 
 module.exports = mongoose.model('Order', OrderSchema);
